@@ -1,0 +1,15 @@
+name: SitFly
+version: ${project.version}
+main: net.teamfruit.sitfly.SitFly
+api-version: 1.15
+authors: [Kamesuta]
+
+commands:
+  sitfly:
+    description: 座る飛ぶ
+    usage: /sitfly
+    permission: sitfly
+permissions:
+  sitfly:
+    description: 座る飛ぶ
+    default: true
