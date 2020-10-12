@@ -8,6 +8,7 @@ commands:
   sitfly:
     description: 座る飛ぶ
     usage: /sitfly
+    aliases: [poa, phoba]
     permission: sitfly
 permissions:
   sitfly:
