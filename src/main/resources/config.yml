@@ -1,4 +1,6 @@
 settings:
-  jump: 1.5
-  down: 0.8
-  speed: 3
+  jump: 1
+  down: 0.6
+  speed: 1
+  limit: 40
+  color: 0xffba4ad4

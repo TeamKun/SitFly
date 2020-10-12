@@ -15,6 +15,7 @@ import org.bukkit.entity.Horse;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.HorseJumpEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataContainer;
@@ -68,7 +69,7 @@ public final class SitFly extends JavaPlugin implements Listener {
         boolean isValid;
         try {
             BufferedImage image = SkinValidator.getPlayerSkinImage(player);
-            isValid = SkinValidator.validateSkin(image);
+            isValid = SkinValidator.validateSkin(image, getConfig().getInt("settings.color"), getConfig().getDouble("settings.limit"));
         } catch (Exception e) {
             logger.log(Level.WARNING, "Skin Texture Load Error", e);
             sender.sendMessage(new ComponentBuilder()
@@ -121,6 +122,22 @@ public final class SitFly extends JavaPlugin implements Listener {
         horse.addPassenger(player);
 
         return true;
+    }
+
+    @EventHandler
+    public void onEntityDamage(EntityDamageEvent event) {
+        Entity entity = event.getEntity();
+
+        if (!(entity instanceof Horse))
+            return;
+
+        // タグ付けチェック
+        PersistentDataContainer persistent = entity.getPersistentDataContainer();
+        if (!persistent.has(horseKey, PersistentDataType.BYTE) || persistent.get(horseKey, PersistentDataType.BYTE) != 1)
+            return;
+
+        // 落下ダメ無効
+        event.setCancelled(true);
     }
 
     @EventHandler
