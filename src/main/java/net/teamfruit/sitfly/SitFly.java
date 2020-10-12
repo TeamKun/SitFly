@@ -1,6 +1,7 @@
 package net.teamfruit.sitfly;
 
-import com.destroystokyo.paper.profile.ProfileProperty;
+import net.md_5.bungee.api.ChatColor;
+import net.md_5.bungee.api.chat.ComponentBuilder;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -24,13 +25,7 @@ import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
 import org.spigotmc.event.entity.EntityDismountEvent;
 
-import javax.imageio.ImageIO;
-import javax.swing.*;
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.util.Base64;
-import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -53,34 +48,51 @@ public final class SitFly extends JavaPlugin implements Listener {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        // コマンドチェック
         if (!command.getName().equals("sitfly"))
             return false;
 
+        // プレイヤーのみ
         if (!(sender instanceof Player)) {
-            sender.sendMessage("プレイヤーからコマンドしてね");
+            sender.sendMessage(new ComponentBuilder()
+                    .append(new ComponentBuilder("[かめすたプラグイン] ").color(ChatColor.LIGHT_PURPLE).create())
+                    .append(new ComponentBuilder("プレイヤーからコマンドしてね").color(ChatColor.RED).create())
+                    .create()
+            );
             return true;
         }
         Player player = (Player) sender;
 
-        Optional<ProfileProperty> prop = player.getPlayerProfile().getProperties().stream().filter(e -> "textures".equals(e.getName())).findFirst();
-        Optional<byte[]> texture = prop.map(ProfileProperty::getValue).map(Base64.getDecoder()::decode);
-        if (!texture.isPresent()) {
-            sender.sendMessage("テクスチャを読み取れません");
-            return true;
-        }
-
+        // スキンチェック
+        boolean isValid;
         try {
-            BufferedImage image = ImageIO.read(new ByteArrayInputStream(texture.get()));
-            JFrame jf = new JFrame();
-            jf.setContentPane(new JLabel(new ImageIcon(image)));
-            jf.setSize(image.getWidth(), image.getHeight());
-            jf.setVisible(true);
-        } catch (IOException e) {
+            BufferedImage image = SkinValidator.getPlayerSkinImage(player);
+            isValid = SkinValidator.validateSkin(image);
+        } catch (Exception e) {
             logger.log(Level.WARNING, "Skin Texture Load Error", e);
-            sender.sendMessage("テキスチャのロードに失敗しました");
+            sender.sendMessage(new ComponentBuilder()
+                    .append(new ComponentBuilder("[かめすたプラグイン] ").color(ChatColor.LIGHT_PURPLE).create())
+                    .append(new ComponentBuilder("スキンの検証に失敗しました").color(ChatColor.RED).create())
+                    .create()
+            );
             return true;
         }
 
+        // スキンダメ
+        if (!isValid) {
+            sender.sendMessage(new ComponentBuilder()
+                    .append(new ComponentBuilder("[かめすたプラグイン] ").color(ChatColor.LIGHT_PURPLE).create())
+                    .append(new ComponentBuilder()
+                            .append("空中浮遊は").color(ChatColor.RED).bold(false)
+                            .append("赤紫色").color(ChatColor.LIGHT_PURPLE).bold(true)
+                            .append("の修道着を身に着ける必要があります。").color(ChatColor.RED).bold(false)
+                            .append("スキンを変更してください。").color(ChatColor.GREEN).bold(false).create())
+                    .create()
+            );
+            return true;
+        }
+
+        // 既に乗っている場合は解除
         Entity vehicle = player.getVehicle();
         if (vehicle != null) {
             PersistentDataContainer persistent = vehicle.getPersistentDataContainer();
@@ -89,8 +101,10 @@ public final class SitFly extends JavaPlugin implements Listener {
             }
         }
 
+        // 位置調整
         player.teleport(player.getLocation().add(0, 2, 0));
 
+        // 馬生成
         Horse horse = player.getWorld().spawn(player.getLocation(), Horse.class);
         horse.setAI(false);
         horse.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, 999999, 100, false, false));
@@ -99,7 +113,10 @@ public final class SitFly extends JavaPlugin implements Listener {
         horse.setJumpStrength(5);
         horse.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(5);
 
+        // タグ付け
         horse.getPersistentDataContainer().set(horseKey, PersistentDataType.BYTE, (byte) 1);
+
+        // 乗馬
         horse.addPassenger(player);
 
         return true;
@@ -108,9 +125,13 @@ public final class SitFly extends JavaPlugin implements Listener {
     @EventHandler
     public void onDismount(EntityDismountEvent event) {
         Entity entity = event.getDismounted();
+
+        // タグ付けチェック
         PersistentDataContainer persistent = entity.getPersistentDataContainer();
         if (!persistent.has(horseKey, PersistentDataType.BYTE) || persistent.get(horseKey, PersistentDataType.BYTE) != 1)
             return;
+
+        // Shiftして、地面だったら降りる、それ以外だったら下がる、
         Location loc = entity.getLocation();
         if (loc.getBlock().getRelative(BlockFace.DOWN, 2).isEmpty()) {
             event.setCancelled(true);
@@ -123,13 +144,17 @@ public final class SitFly extends JavaPlugin implements Listener {
     @EventHandler
     public void onHorseJump(HorseJumpEvent event) {
         AbstractHorse entity = event.getEntity();
+
+        // タグ付けチェック
         PersistentDataContainer persistent = entity.getPersistentDataContainer();
         if (!persistent.has(horseKey, PersistentDataType.BYTE) || persistent.get(horseKey, PersistentDataType.BYTE) != 1)
             return;
+
+        // Spaceしたら少し上がる
         Location loc = entity.getLocation();
         if (loc.getBlock().getRelative(BlockFace.UP, 2).isEmpty()) {
             logger.info("" + event.getPower());
-            entity.setVelocity(new Vector(0, event.getPower() * event.getPower() * 10, 0));
+            entity.setVelocity(new Vector(0, event.getPower() * event.getPower() * 2, 0));
         }
     }
 }
