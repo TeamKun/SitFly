@@ -65,6 +65,21 @@ public final class SitFly extends JavaPlugin implements Listener {
         }
         Player player = (Player) sender;
 
+        // 既に乗っている場合は解除
+        Entity vehicle = player.getVehicle();
+        if (vehicle != null) {
+            PersistentDataContainer persistent = vehicle.getPersistentDataContainer();
+            if (persistent.has(horseKey, PersistentDataType.BYTE) && persistent.get(horseKey, PersistentDataType.BYTE) == 1) {
+                vehicle.remove();
+                sender.sendMessage(new ComponentBuilder()
+                        .append(new ComponentBuilder("[かめすたプラグイン] ").color(ChatColor.LIGHT_PURPLE).create())
+                        .append(new ComponentBuilder("解除しました").color(ChatColor.GREEN).create())
+                        .create()
+                );
+                return true;
+            }
+        }
+
         // スキンチェック
         boolean isValid;
         try {
@@ -92,15 +107,6 @@ public final class SitFly extends JavaPlugin implements Listener {
                     .create()
             );
             return true;
-        }
-
-        // 既に乗っている場合は解除
-        Entity vehicle = player.getVehicle();
-        if (vehicle != null) {
-            PersistentDataContainer persistent = vehicle.getPersistentDataContainer();
-            if (persistent.has(horseKey, PersistentDataType.BYTE) && persistent.get(horseKey, PersistentDataType.BYTE) == 1) {
-                vehicle.remove();
-            }
         }
 
         // 位置調整
