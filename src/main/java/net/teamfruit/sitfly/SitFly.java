@@ -1,5 +1,6 @@
 package net.teamfruit.sitfly;
 
+import com.destroystokyo.paper.profile.ProfileProperty;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -23,6 +24,14 @@ import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
 import org.spigotmc.event.entity.EntityDismountEvent;
 
+import javax.imageio.ImageIO;
+import javax.swing.*;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.util.Base64;
+import java.util.Optional;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public final class SitFly extends JavaPlugin implements Listener {
@@ -52,6 +61,25 @@ public final class SitFly extends JavaPlugin implements Listener {
             return true;
         }
         Player player = (Player) sender;
+
+        Optional<ProfileProperty> prop = player.getPlayerProfile().getProperties().stream().filter(e -> "textures".equals(e.getName())).findFirst();
+        Optional<byte[]> texture = prop.map(ProfileProperty::getValue).map(Base64.getDecoder()::decode);
+        if (!texture.isPresent()) {
+            sender.sendMessage("テクスチャを読み取れません");
+            return true;
+        }
+
+        try {
+            BufferedImage image = ImageIO.read(new ByteArrayInputStream(texture.get()));
+            JFrame jf = new JFrame();
+            jf.setContentPane(new JLabel(new ImageIcon(image)));
+            jf.setSize(image.getWidth(), image.getHeight());
+            jf.setVisible(true);
+        } catch (IOException e) {
+            logger.log(Level.WARNING, "Skin Texture Load Error", e);
+            sender.sendMessage("テキスチャのロードに失敗しました");
+            return true;
+        }
 
         Entity vehicle = player.getVehicle();
         if (vehicle != null) {
